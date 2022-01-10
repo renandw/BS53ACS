@@ -13,11 +13,8 @@
 static const char* ac_cmd_string(ac_cmd command) {
     static char unknown[5];
     switch (command) {
-        case ac_cmd_stay_on: return "stay on";
         case ac_cmd_turn_on: return "turn on";
         case ac_cmd_turn_off: return "turn off";
-        case ac_cmd_step_horiz: return "step horiz";
-        case ac_cmd_step_vert: return "step vert";
         default: {
             snprintf(unknown, sizeof(unknown), "0x%02x", command & 0xff);
             return unknown;
@@ -37,7 +34,7 @@ static const char* ac_mode_string(ac_mode mode) {
 }
 
 static const char* ac_fan_string(ac_fan fan) {
-    static char* strings[] = {"auto", "high", "med", "low", "quiet"};
+    static char* strings[] = {"auto", "high", "med", "low"};
     static char unknown[5];
     if (fan > countof(strings)) {
         snprintf(unknown, sizeof(unknown), "0x%02x", fan & 0xff);
@@ -47,7 +44,7 @@ static const char* ac_fan_string(ac_fan fan) {
 }
 
 static const char* ac_swing_string(ac_swing swing) {
-    static char* strings[] = {"off", "vert", "horiz", "both"};
+    static char* strings[] = {"off", "vert"};
     static char unknown[5];
     if (swing > countof(strings)) {
         snprintf(unknown, sizeof(unknown), "0x%02x", swing & 0xff);
@@ -67,6 +64,7 @@ static void print_state(const char *prompt, fujitsu_ac_state_t *state) {
         state->temperature
     );
 }
+
 
 
 static fujitsu_ac_model model;
@@ -96,7 +94,7 @@ int fujitsu_ac_ir_send(fujitsu_ac_state_t *state) {
     uint8_t cmd[13];
     size_t cmd_size = 13;
     cmd[0] = 0xC3;
-    cmd[1] = state->swing | ((state->temperature - AC_MIN_TEMPERATURE) << 3);
+    cmd[1] = state->swing | ((state->temperature - 8) << 3);
     cmd[2] = 0xe0;
     cmd[3] = 0x10;;
     cmd[4] = state->fan;
@@ -112,8 +110,6 @@ int fujitsu_ac_ir_send(fujitsu_ac_state_t *state) {
 
         switch (state->command) {
         case ac_cmd_turn_off:
-        case ac_cmd_step_horiz:
-        case ac_cmd_step_vert:
             cmd[9] = state->command;
 
             if (model == fujitsu_ac_model_ARRAH2E) {
@@ -127,10 +123,10 @@ int fujitsu_ac_ir_send(fujitsu_ac_state_t *state) {
         default:
             switch (model) {
             case fujitsu_ac_model_ARRAH2E:
-                cmd[9] = 0x20;
+                cmd[9] = 0x00;
                 break;
             case fujitsu_ac_model_ARDB1:
-                cmd[9] = 0x20;
+                cmd[9] = 0x00;
                 break;
             }
         cmd[10] = 0x00;
@@ -205,8 +201,6 @@ static int fujitsu_ac_ir_decoder_decode(fujitsu_ac_ir_decoder_t *decoder,
 
     switch (cmd[9]) {
     case ac_cmd_turn_off:
-    case ac_cmd_step_horiz:
-    case ac_cmd_step_vert:
         if ((cmd_size == 10) && (cmd[10] != (~cmd[9] & 0xff))) {
             return -1;
         } else if (cmd_size > 10) {
