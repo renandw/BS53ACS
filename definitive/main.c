@@ -23,6 +23,7 @@ const uint8_t i2c_bus = 0;
 const uint8_t scl_pin = 5;
 const uint8_t sda_pin = 4;
 
+#define TEMPERATURE_POLL_PERIOD 10000
 #define LED_GPIO 2
 #define IR_RX_GPIO 14
 
@@ -306,6 +307,7 @@ static void bmp280_task_normal(void *pvParameters)
 
                         current_temperature.value = HOMEKIT_FLOAT(temperature);
                         current_humidity.value = HOMEKIT_FLOAT(humidity);
+                        vTaskDelay(TEMPERATURE_POLL_PERIOD / portTICK_PERIOD_MS);
 
                         homekit_characteristic_notify(&current_temperature, current_temperature.value);
                         homekit_characteristic_notify(&current_humidity, current_humidity.value);
@@ -322,6 +324,7 @@ static void bmp280_task_normal(void *pvParameters)
                                 }
                         }
                 }
+
         }
 }
 #endif
